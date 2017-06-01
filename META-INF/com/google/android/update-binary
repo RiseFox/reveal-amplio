@@ -1,0 +1,208 @@
+#!/sbin/sh
+OUTFD=$2
+ZIP=$3
+slib=/system/lib
+pol=/system/etc/audio_policy.conf
+conf=/system/etc/audio_effects.conf
+bp=/system/build.prop
+ui_print() {
+  echo -n -e "ui_print $1\n" > /proc/self/fd/$OUTFD
+  echo -n -e "ui_print\n" > /proc/self/fd/$OUTFD
+}
+ch_con() {
+  LD_LIBRARY_PATH=$slib /system/toolbox chcon -h u:object_r:system_file:s0 $1
+  LD_LIBRARY_PATH=$slib /system/bin/toolbox chcon -h u:object_r:system_file:s0 $1
+  chcon -h u:object_r:system_file:s0 $1
+  LD_LIBRARY_PATH=$slib /system/toolbox chcon u:object_r:system_file:s0 $1
+  LD_LIBRARY_PATH=$slib /system/bin/toolbox chcon u:object_r:system_file:s0 $1
+  chcon u:object_r:system_file:s0 $1
+}
+ch_con_ext() {
+  LD_LIBRARY_PATH=$syslib /system/toolbox chcon $2 $1
+  LD_LIBRARY_PATH=$syslib /system/bin/toolbox chcon $2 $1
+  chcon $2 $1
+}
+ln_con() {
+  LD_LIBRARY_PATH=$syslib /system/toolbox ln -s $1 $2
+  LD_LIBRARY_PATH=$syslib /system/bin/toolbox ln -s $1 $2
+  ln -s $1 $2
+  ch_con $2
+}
+set_perm() {
+  chown $1.$2 $4
+  chown $1:$2 $4
+  chmod $3 $4
+  ch_con $4
+  ch_con_ext $4 $5
+}
+cp_perm() {
+  rm $5
+  if [ -f "$4" ]; then
+    cat $4 > $5
+    set_perm $1 $2 $3 $5 $6
+  fi
+}
+cat /system/bin/toolbox > /system/toolbox
+chmod 0777 /system/toolbox
+ch_con /system/toolbox
+ui_print "Installation Started..."
+umount /system
+mount /system
+mount -o rw,remount /system
+mount -o rw,remount /system /system
+cd /tmp
+mkdir amplio
+cd amplio
+unzip -o "$ZIP"
+if [ -f /system/build.prop.bak ];
+  then
+    rm -rf $bp
+    cp $bp.bak $bp
+  else
+    cp $bp $bp.bak
+fi
+sed -i '/clock.allow_streaming_errors=false/d' /system/build.prop
+sed -i '/af.resampler.quality=4/d' /system/build.prop
+sed -i '/af.resampler.quality=6/d' /system/build.prop
+sed -i '/af.resampler.quality=255/d' /system/build.prop
+sed -i '/persist.af.resampler.quality=4/d' /system/build.prop
+sed -i '/persist.af.resampler.quality=6/d' /system/build.prop
+sed -i '/persist.af.resampler.quality=255/d' /system/build.prop
+echo "
+clock.allow_streaming_errors=false
+af.resampler.quality=255
+persist.af.resampler.quality=255" >> /system/build.prop
+ui_print "30%..."
+sed -i '/lpa.decode=true/d' /system/build.prop
+sed -i '/lpa30.decode=true/d' /system/build.prop
+sed -i '/lpa.use-stagefright=true/d' /system/build.prop
+sed -i '/lpa.releaselock=true/d' /system/build.prop
+sed -i '/lpa.deepbuffer.enable=1/d' /system/build.prop
+sed -i '/lpa.decode=false/d' /system/build.prop
+sed -i '/lpa30.decode=false/d' /system/build.prop
+sed -i '/lpa.use-stagefright=false/d' /system/build.prop
+sed -i '/lpa.releaselock=false/d' /system/build.prop
+sed -i '/lpa.deepbuffer.enable=0/d' /system/build.prop
+echo "
+lpa.decode=false
+lpa30.decode=false
+lpa.use-stagefright=false
+lpa.releaselock=false
+lpa.deepbuffer.enable=0" >> /system/build.prop
+sed -i '/tunnel.decode=true/d' /system/build.prop
+sed -i '/tunnel.audiovideo.decode=true/d' /system/build.prop
+sed -i '/tunnel.audio.encode=true/d' /system/build.prop
+sed -i '/tunnel.multiple=true/d' /system/build.prop
+sed -i '/tunnel.decode=false/d' /system/build.prop
+sed -i '/tunnel.audiovideo.decode=false/d' /system/build.prop
+sed -i '/tunnel.audio.encode=false/d' /system/build.prop
+sed -i '/tunnel.multiple=false/d' /system/build.prop
+echo "
+tunnel.decode=false
+tunnel.audiovideo.decode=false
+tunnel.audio.encode=false
+tunnel.multiple=false" >> /system/build.prop
+sed -i '/media.aac_51_output_enabled=false/d' /system/build.prop
+sed -i '/use.non-omx.aac.decoder=false/d' /system/build.prop
+sed -i '/media.stagefright.enable-aac=false/d' /system/build.prop
+sed -i '/ro.ril.enable.amr.wideband=0/d' /system/build.prop
+sed -i '/media.aac_51_output_enabled=true/d' /system/build.prop
+sed -i '/use.non-omx.aac.decoder=true/d' /system/build.prop
+sed -i '/ro.ril.enable.amr.wideband=1/d' /system/build.prop
+sed -i '/media.stagefright.enable-aac=true/d' /system/build.prop
+echo "
+media.aac_51_output_enabled=true
+use.non-omx.aac.decoder=true
+media.stagefright.enable-aac=true
+ro.ril.enable.amr.wideband=1" >> /system/build.prop
+if [ -f /system/etc/player.cfg];
+  then
+sed -i '/save_ao=0/d' /system/etc/player.cfg
+sed -i '/save_fread=0/d' /system/etc/player.cfg
+sed -i '/enable_aync_read=0/d' /system/etc/player.cfg
+sed -i '/enable_ftrace=0/d' /system/etc/player.cfg
+sed -i '/log_fps_interval=0/d' /system/etc/player.cfg
+sed -i '/save_ao=1/d' /system/etc/player.cfg
+sed -i '/save_fread=1/d' /system/etc/player.cfg
+sed -i '/enable_aync_read=1/d' /system/etc/player.cfg
+sed -i '/enable_ftrace=1/d' /system/etc/player.cfg
+sed -i '/log_fps_interval=1/d' /system/etc/player.cfg
+echo "save_ao=0
+save_fread=0
+enable_aync_read=0
+enable_ftrace=0
+log_fps_interval=0" >> /system/etc/player.cfg
+  else
+    ui_print ""
+fi
+sed -i '/dalvik.vm.heapgrowthlimit=128m/d' /system/build.prop
+sed -i '/dalvik.vm.heapgrowthlimit=192m/d' /system/build.prop
+sed -i '/dalvik.vm.heapgrowthlimit=256m/d' /system/build.prop
+sed -i '/dalvik.vm.heapgrowthlimit=384m/d' /system/build.prop
+sed -i '/dalvik.vm.heapsize=256m/d' /system/build.prop
+sed -i '/dalvik.vm.heapsize=384m/d' /system/build.prop
+sed -i '/dalvik.vm.heapsize=512m/d' /system/build.prop
+sed -i '/ro.kernel.android.checkjni=0/d' /system/build.prop
+sed -i '/ro.kernel.checkjni=0/d' /system/build.prop
+sed -i '/o.config.nocheckin=1/d' /system/build.prop
+sed -i '/profiler.force_disable_err_rpt=1/d' /system/build.prop
+sed -i '/profiler.force_disable_ulog=1/d' /system/build.prop
+sed -i '/ro.kernel.android.checkjni=1/d' /system/build.prop
+sed -i '/ro.kernel.checkjni=1/d' /system/build.prop
+sed -i '/o.config.nocheckin=0/d' /system/build.prop
+sed -i '/profiler.force_disable_err_rpt=0/d' /system/build.prop
+sed -i '/profiler.force_disable_ulog=0/d' /system/build.prop
+sed -i '/av.debug.disable.pers.cache=false/d' /system/build.prop
+echo "
+dalvik.vm.heapgrowthlimit=384m
+dalvik.vm.heapsize=512m
+ro.kernel.android.checkjni=0
+ro.kernel.checkjni=0
+ro.config.nocheckin=1
+profiler.force_disable_err_rpt=1
+profiler.force_disable_ulog=1
+av.debug.disable.pers.cache=true" >> /system/build.prop
+ui_print "50%..."
+if [ -f /system/audio_effects.conf.bak ];
+  then
+    rm -rf $conf
+    cp $conf.bak $conf
+  else
+    cp $conf $conf.bak
+fi
+sed -i '/loudness_enhancer {/,/}/d' $conf
+sed -i '/pre_processing {/,/}/d' $conf
+sed -i '/bassboost {/,/}/d' $conf
+sed -i '/virtualizer {/,/}/d' $conf
+sed -i '/reverb_pre_aux {/,/}/d' $conf
+sed -i '/reverb_env_aux {/,/}/d' $conf
+sed -i '/reverb_env_ins {/,/}/d' $conf
+sed -i '/reverb_pre_ins {/,/}/d' $conf
+sed -i '/visualizer {/,/}/d' $conf
+sed -i 's/^libraries {/libraries {\n  pre_processing {\n    path \/system\/lib\/soundfx\/libaudiopreprocessing.so\n  }/g' $conf
+sed -i 's/^libraries {/libraries {\n  visualizer {\n    path \/system\/lib\/soundfx\/libvisualizer.so\n  }/g' $conf
+sed -i 's/^effects {/effects {\n  agc {\n    library pre_processing\n    uuid aa8130e0-66fc-11e0-bad0-0002a5d5c51b\n  }/g' $conf
+ui_print "70%..."
+if [ -f /system/audio_policy.conf.bak ];
+  then
+    rm -rf $pol
+    cp $pol.bak $pol
+  else
+    cp $pol $pol.bak
+fi
+API=$(cat /system/build.prop | grep "ro.build.version.sdk=" | dd bs=1 skip=21 count=2)
+if [ "$API" -ge "21" ];
+then
+ui_print ""
+else
+	sed -i '/outputs {/,/}/s/sampling_rates.*/sampling_rates 44100|48000|64000|88200|96000/g' $pol
+    sed -i '/outputs {/,/}/s/formats.*/formats AUDIO_FORMAT_PCM_24_BIT|AUDIO_FORMAT_PCM_16_BIT/g' $pol
+fi
+ui_print "90%..."
+mkdir -p /system/addon.d
+set_perm 0 0 0755 /system/addon.d/
+cp_perm 0 0 0644 /tmp/amplio/addon.d/90-reveal.sh /system/addon.d/90-reveal.sh
+ui_print "Done!"
+rm /system/toolbox
+umount /system
+rm -rf /tmp/amplio

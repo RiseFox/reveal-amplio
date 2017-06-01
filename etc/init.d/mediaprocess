@@ -1,0 +1,22 @@
+#!/system/bin/sh
+
+renice -20 `pidof mediaserver`;
+renice -20 `pidof admsrv`;
+renice -20 `pidof android.process.media`;
+ionice `pidof mediaserver` rt 0;
+ionice `pidof admsrv` rt 0;
+ionice `pidof android.process.media` rt 0;
+while sleep 1; do
+  if [ `pidof com.android.media ]; then
+    music=`$bb pidof com.android.media`;
+    busybox renice -18 $music;
+    echo -17 > /proc/$music/oom_adj;
+    chmod 100 /proc/$music/oom_adj;
+  if [ `pidof mediaserver ]; then
+    music=`$bb pidof mediaserver`;
+    busybox renice -18 $music;
+    echo -17 > /proc/$music/oom_adj;
+    chmod 100 /proc/$music/oom_adj;
+    exit;
+  fi;
+done&
